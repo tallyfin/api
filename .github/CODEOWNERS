@@ -1,0 +1,6 @@
+# Everyone on the dev team reviews by default.
+*                 @tallyfin/developers
+
+# Payments and tax changes also need someone from platform.
+/src/payments.ts  @tallyfin/developers @tallyfin/platform
+/src/tax/         @tallyfin/developers @tallyfin/platform
