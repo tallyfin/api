@@ -1,0 +1,33 @@
+name: dependency-report
+
+on:
+  pull_request:
+    paths:
+      - package.json
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Comment with dependency changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          changes=$(git diff "$BASE_SHA" HEAD -- package.json | grep -E '^[+-] ' || true)
+          {
+            echo "#### Dependency changes"
+            echo
+            echo '```diff'
+            echo "$changes"
+            echo '```'
+          } > report.md
+          gh pr comment "$PR_NUMBER" --body-file report.md
