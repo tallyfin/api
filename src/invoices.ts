@@ -1,4 +1,5 @@
 import { add, money, type Currency, type Money } from "./money.ts";
+import type { InvoiceNumberSource } from "./sequences.ts";
 
 export interface LineItem {
   description: string;
@@ -30,14 +31,6 @@ export interface InvoiceTotals {
 
 const PAYMENT_TERMS_DAYS = 14;
 
-// TODO: numbers should be sequential per organization, not global.
-let lastInvoiceNumber = 1000;
-
-export function nextInvoiceNumber(): string {
-  lastInvoiceNumber += 1;
-  return `INV-${lastInvoiceNumber}`;
-}
-
 export function calculateTotals(invoice: Pick<Invoice, "currency" | "lineItems">): InvoiceTotals {
   let subtotal = money(0, invoice.currency);
   let tax = money(0, invoice.currency);
@@ -49,20 +42,23 @@ export function calculateTotals(invoice: Pick<Invoice, "currency" | "lineItems">
   return { subtotal, tax, total: add(subtotal, tax) };
 }
 
-export function createInvoice(input: {
-  id: string;
-  organizationId: string;
-  customerId: string;
-  currency: Currency;
-  lineItems: LineItem[];
-  issuedAt?: Date;
-}): Invoice {
+export async function createInvoice(
+  input: {
+    id: string;
+    organizationId: string;
+    customerId: string;
+    currency: Currency;
+    lineItems: LineItem[];
+    issuedAt?: Date;
+  },
+  numbers: InvoiceNumberSource,
+): Promise<Invoice> {
   const issuedAt = input.issuedAt ?? new Date();
   const dueAt = new Date(issuedAt);
   dueAt.setUTCDate(dueAt.getUTCDate() + PAYMENT_TERMS_DAYS);
   return {
     ...input,
-    number: nextInvoiceNumber(),
+    number: await numbers.next(input.organizationId),
     issuedAt,
     dueAt,
     status: "draft",
